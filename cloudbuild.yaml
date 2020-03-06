@@ -1,0 +1,47 @@
+steps:
+  # Build the module.
+  # 編譯go 服務
+  #  - name: golang
+  #    args: ['go', 'build', '.']
+  #    env: ['GO111MODULE=on']
+  #  # This step init go app use go install .
+  #  # 安裝app
+  #  - name: 'gcr.io/cloud-builders/go:alpine'
+  #    id: Install app
+  #    args: ['install', '.']
+  #    env: ['PROJECT_ROOT=hello']
+  # 建置映像檔
+  # This step build the container images .
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build Image
+    args: ['build','-t','gcr.io/$PROJECT_ID/${_IMAGE}:latest','--cache-from','gcr.io/$PROJECT_ID/${_IMAGE}:latest','.']
+  # 推送至Container Registery
+  # this step pushes the images to gcr
+  # the PROJECT_ID and SHORT_SHA variables are automatically
+  # replaced by cloud build .
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push Image
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/${_IMAGE}:latest'
+  # 更新容器
+  - name: 'gcr.io/cloud-builders/kubectl'
+    id: Create k8s app
+    args:
+      - 'set'
+      - 'image'
+      - 'deployment/${_DEPLOYMENT}'
+      - '${_IMAGE}=gcr.io/$PROJECT_ID/${_IMAGE}:latest'
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=${_CLUSTER}'
+timeout: 600s
+# 設定檔變數
+substitutions:
+  _ZONE: asia-east1-b
+  _CLUSTER: k8s-cluster-2
+  _IMAGE: golang-websocket
+  _DEPLOYMENT: golang-websocket
+images: ['gcr.io/$PROJECT_ID/${_IMAGE}:latest']
+
+
